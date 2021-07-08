@@ -49,7 +49,35 @@ const cartModalOpen = () => {
 
 const cartModalClose = () => {
 	cartOverlay.classList.remove('cart-overlay-open');
+	enableScroll();
 };
+
+// запрос к базе данных
+// используем асинхронную функцию
+const getData = async () => {
+	// await ждет пока fetch не вернет ответ
+	const data = await fetch('db.json');
+	if(data.ok) {
+		return data.json();
+	} else {
+		throw new Error(`Данные не были получены, ошибка ${data.status} ${data.statusText}`);
+	}
+}
+
+const getGoods = (callback) => {
+	// пытаемся получить данные и обработать ошибку
+	getData()
+		.then(data => {
+			callback(data);
+		})
+		.catch(err => {
+			console.error(err);
+		});
+};
+
+getGoods((data) => {
+	console.log(data);
+});
 
 subheaderCart.addEventListener('click', cartModalOpen);
 
@@ -64,7 +92,5 @@ cartOverlay.addEventListener('click', event => {
 	// 2-й способ
 	if(target.matches('.cart__btn-close') || target.matches('.cart-overlay')) {
 		cartModalClose();
-		enableScroll();
 	}
 });
-
