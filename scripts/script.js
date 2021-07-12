@@ -1,5 +1,5 @@
 const headerCityButton = document.querySelector('.header__city-button');
-const goodsTitle = document.querySelector('.goods__title');
+// const goodsTitle = document.querySelector('.goods__title');
 const navigationList = document.querySelector('.navigation__list');
 let hash = location.hash.substring(1);
 
@@ -67,12 +67,12 @@ const getData = async () => {
 	}
 }
 
-const getGoods = (callback, value) => {
+const getGoods = (callback, prop, value) => {
 	// пытаемся получить данные и обработать ошибку
 	getData()
 		.then(data => {
 			if(value) {
-				callback(data.filter(item => item.category === value));
+				callback(data.filter(item => item[prop] === value));
 			} else {
 				callback(data);
 			}
@@ -99,12 +99,19 @@ cartOverlay.addEventListener('click', event => {
 	}
 });
 
+// страница категорий
 try {
 	const goodsList = document.querySelector('.goods__list');
 	if(!goodsList) {
 		throw 'This is not a goods page';
 	}
 	
+	const goodsTitle = document.querySelector('.goods__title');
+	const changeTitle = () => {
+		// с помощью такого css-селекторра получаем хэш из соотв. ссылки
+		goodsTitle.textContent = document.querySelector(`[href*="#${hash}"]`).textContent;
+	};
+
 	// создаем 1 карточку товара
 	const createCard = ({id, preview, cost, brand, name, sizes}) => {
 		const li = document.createElement('li');
@@ -136,19 +143,80 @@ try {
 
 	window.addEventListener('hashchange', () => {
 		hash = location.hash.substring(1);
-		getGoods(renderGoodsList, hash);
+		changeTitle();
+		getGoods(renderGoodsList, 'category', hash);
 		
 	});
 
-	getGoods(renderGoodsList, hash);
+	changeTitle();
+	getGoods(renderGoodsList, 'category', hash);
 
 } catch (err) {
 	console.warn(err);
 }
 
-navigationList.addEventListener('click', event => {
-	const target = event.target;
-	if(target.matches('.navigation__link')) {
-		goodsTitle.textContent = target.textContent;
+// страница товара
+try {
+	if(!document.querySelector('.card-good')) {
+		throw 'This is not a card-good page';
 	}
-});
+	const cardGoodImage = document.querySelector('.card-good__image');
+	const cardGoodBrand = document.querySelector('.card-good__brand');
+	const cardGoodTitle = document.querySelector('.card-good__title');
+	const cardGoodPrice = document.querySelector('.card-good__price');
+	const cardGoodColor = document.querySelector('.card-good__color');
+	
+	// таких элементов на странице несколько, поэтому получаем все
+	const cardGoodSelectWrapper = document.querySelectorAll('.card-good__select__wrapper');
+
+	const cardGoodColorList = document.querySelector('.card-good__color-list');
+	const cardGoodSizes = document.querySelector('.card-good__sizes');
+	const cardGoodSizesList = document.querySelector('.card-good__sizes-list');
+	const cardGoodBuy = document.querySelector('.card-good__buy');
+
+	//формируем список (например, доступных цветов), добавляя каждый элемент массива в конец списка
+	const generateList = data => data.reduce((html, item, i) => html + 
+	`<li class="card-good__select-item" data-id="${i}">${item}</li>`, '');
+
+	// так как getGoods возвращает нам массив, то здесь принимаем только 0-й элемент (1 товар)
+	const renderCardGood = ([{brand, name, cost, color, sizes, photo}]) => {
+		cardGoodImage.src = `goods-image/${photo}`;
+		cardGoodImage.alt = `${brand} ${name}`;
+		cardGoodBrand.textContent = brand;
+		cardGoodTitle.textContent = name;
+		cardGoodPrice.textContent = `${cost} UAH`;
+		if(color) {
+			cardGoodColor.textContent = color[0];
+			cardGoodColor.dataset.id = 0;
+			cardGoodColorList.innerHTML = generateList(color);
+		} else {
+			cardGoodColor.style.display = 'none';
+		}
+		if(sizes) {
+			cardGoodSizes.textContent = sizes[0];
+			cardGoodSizes.dataset.id = 0;
+			cardGoodSizesList.innerHTML = generateList(sizes);
+		} else {
+			cardGoodSizes.style.display = 'none';
+		}
+	};
+
+	// события для нажатия на кнопку раскрытия списка (цвет, размер)
+	cardGoodSelectWrapper.forEach(item => {
+		item.addEventListener('click', e => {
+			const target = e.target;
+			if(target.closest('.card-good__select')) {
+				target.classList.toggle('card-good__select__open');
+			}
+			if(target.closest('.card-good__select-item')) {
+				const cardGoodSelect = item.querySelector('.card-good__select');
+				cardGoodSelect.textContent = target.textContent;
+				cardGoodSelect.dataset.id = target.dataset.id;
+				cardGoodSelect.classList.remove('card-good__select__open');
+			}
+		});
+	});
+	getGoods(renderCardGood, 'id', hash);
+} catch (err) {
+	console.warn(err);
+}
